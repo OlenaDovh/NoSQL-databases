@@ -1,5 +1,5 @@
 from pymongo.errors import PyMongoError
-from typing import Literal
+from typing import Literal, Optional, Any
 from config.db_connection import products_col
 from models.product import Product
 
@@ -8,8 +8,19 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-def create_product(name: str, price: float, category: str, stock_count: int) -> dict | None:
-    """Creates new product and returns it id"""
+def create_product(name: str, price: float, category: str, stock_count: int) -> Optional[dict[str, str]]:
+    """
+    Creates a new product in the database if it does not already exist.
+    Args:
+        name (str): The name of the product.
+        price (float): The unit price of the product.
+        category (str): The product category.
+        stock_count (int): Initial quantity in stock.
+
+    Returns Optional[dict[str, str]]: A dictionary with 'inserted_id' if successful,
+                                      None if the product already exists.
+    Raises PyMongoError: If a database error occurs during insertion.
+    """
     try:
         if products_col.find_one({"name": name}):
             logger.warning(f"Product '{name}' already exists")
@@ -23,8 +34,12 @@ def create_product(name: str, price: float, category: str, stock_count: int) -> 
         raise
 
 
-def get_product_count_in_stock(product_name: str) -> int | None:
-    """Returns count of products available in stock"""
+def get_product_count_in_stock(product_name: str) -> int:
+    """
+    Retrieves the current stock quantity for a specific product.
+    Args product_name (str): The name of the product to check.
+    Returns int: The quantity available in stock. Returns 0 if product is not found.
+    """
     product = products_col.find_one({"name": product_name})
 
     if not product:
@@ -36,7 +51,16 @@ def get_product_count_in_stock(product_name: str) -> int | None:
 
 def update_prods_in_stock(product_name: str, count: int,
                           action: Literal["add", "remove"] = "add") -> None:
-    """Updates product stock count"""
+    """
+    Updates the stock count for a given product by adding or removing items.
+    Args:
+        product_name (str): The name of the product to update.
+        count (int): The quantity to change by.
+        action (Literal["add", "remove"]): The direction of the stock update.
+    Raises:
+        ValueError: If the product is not found or if removal exceeds available stock.
+        Exception: For general database or logic errors.
+    """
     try:
         product = products_col.find_one({"name": product_name})
 
@@ -69,7 +93,7 @@ def update_prods_in_stock(product_name: str, count: int,
 
 
 def delete_unavailable_products() -> None:
-    """Deletes all unavailable products"""
+    """Removes all products from the database that have a stock count of zero or less"""
     try:
         result = products_col.delete_many({
             "stock_count": {"$lte": 0}
@@ -82,7 +106,12 @@ def delete_unavailable_products() -> None:
 
 
 def get_product_price(product_name: str) -> float:
-    """Returns price of product"""
+    """
+    Retrieves the price of a specific product.
+    Args product_name (str): The name of the product.
+    Returns float: The unit price of the product.
+    Raises ValueError: If the product is not found.
+    """
     try:
         product = products_col.find_one({"name": product_name})
 
@@ -95,8 +124,13 @@ def get_product_price(product_name: str) -> float:
         raise
 
 
-def get_products_by_category(category: str) -> list:
-    """Returns list of products. Returns empty list if none found."""
+def get_products_by_category(category: str) -> list[dict[str, Any]]:
+    """
+    Retrieves all products belonging to a specific category, sorted by price.
+    Args category (str): The category name to filter by.
+    Returns list[dict[str, Any]]: A list of product documents.
+    Raises ValueError: If no products are found in the specified category.
+    """
     try:
         result = list(products_col.find(
             {"category": category},
@@ -110,8 +144,11 @@ def get_products_by_category(category: str) -> list:
         raise
 
 
-def get_available_categories() -> list:
-    """Returns list of available categories"""
+def get_available_categories() -> list[str]:
+    """
+    Retrieves a list of all unique categories currently in the database.
+    Returns list[str]: A list of category names. Returns an empty list if none exist.
+    """
     try:
         categories = products_col.distinct("category")
 

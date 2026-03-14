@@ -1,4 +1,8 @@
 from datetime import datetime, timedelta
+from typing import Any
+
+from pymongo.results import InsertOneResult
+
 from config.db_connection import orders_col
 from pymongo.errors import PyMongoError
 from models.orders import Order
@@ -7,8 +11,13 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-def create_order(order: Order) -> dict:
-    """Create a new order"""
+def create_order(order: Order) -> InsertOneResult:
+    """
+    Inserts a new order document into the MongoDB collection.
+    Args order (Order): An instance of the Order model.
+    Returns InsertOneResult: The result object from MongoDB containing the inserted ID.
+    Raises PyMongoError: If the database operation fails.
+    """
     try:
         result = orders_col.insert_one(order.to_dict())
         logger.info(f"Order created | id={result.inserted_id}")
@@ -18,8 +27,14 @@ def create_order(order: Order) -> dict:
         raise
 
 
-def all_orders_for_last_period(period: int) -> list:
-    """Returns all orders for last period days"""
+def all_orders_for_last_period(period: int) -> list[dict[str, Any]]:
+    """
+    Retrieves all orders placed within a specified number of days.
+    The method filters documents by date and formats the datetime objects
+    into readable strings for reporting.
+    Args period (int): Number of days to look back from the current time.
+    Returns: list[dict[str, Any]]: A list of order documents without the MongoDB '_id'.
+    """
     try:
         date_limit = datetime.now() - timedelta(days=period)
 
@@ -38,8 +53,15 @@ def all_orders_for_last_period(period: int) -> list:
         raise
 
 
-def get_sold_products_count(period: int) -> list:
-    """Returns sold products count"""
+def get_sold_products_count(period: int) -> list[dict[str, Any]]:
+    """"
+    Calculates the total quantity sold for each product within a given period.
+    Uses an aggregation pipeline to unwind the products array and group
+    by product name.
+    Args period (int): Number of days for the analysis.
+    Returns: list[dict[str, Any]]: List of dictionaries containing product names
+    and their total sold quantities, sorted by volume.
+    """
     try:
         date_limit = datetime.now() - timedelta(days=period)
         result = list(orders_col.aggregate([
@@ -69,8 +91,13 @@ def get_sold_products_count(period: int) -> list:
         raise
 
 
-def get_orders_sum_by_user(user: str) -> list:
-    """Returns orders sum by user"""
+def get_orders_sum_by_user(user: str) -> list[dict[str, Any]]:
+    """
+    Calculates the lifetime total spend for a specific user.
+    Args user (str): The unique username or identifier of the customer.
+    Returns list[dict[str, Any]]: A list containing the user and their rounded
+    total spend. Returns empty list if user not found.
+    """
     try:
         result = list(orders_col.aggregate([
             {"$match": {"user": user}},

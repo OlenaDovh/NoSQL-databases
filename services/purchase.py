@@ -1,3 +1,5 @@
+from typing import Any
+
 from models.orders import Order
 from services.product_operations import (get_product_price, get_product_count_in_stock, update_prods_in_stock)
 from services.order_operations import create_order
@@ -8,8 +10,21 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-def purchase_creation(user, products_with_count: dict) -> dict:
-    """Returns dict with purchase details"""
+def purchase_creation(user: str, products_with_count: dict[str, int]) -> dict[str, Any]:
+    """
+    Orchestrates the creation of a purchase and handles inventory updates.
+    This function performs a two-pass validation:
+    1. Checks if all requested products are in stock.
+    2. Deducts stock, calculates total price, and saves the order to the database.
+    Args:
+        user (str): The username of the customer placing the order.
+        products_with_count (Dict[str, int]): A dictionary mapping product names
+                                              to the requested quantity.
+    Returns dict[str, Any]: A dictionary representation of the successfully created Order.
+    Raises:
+        ValueError: If any product is out of stock or has insufficient quantity.
+        Exception: If any database or logic error occurs during the process.
+    """
     try:
         logger.info(f"Оформлення замовлення для '{user}'")
         total_price = 0

@@ -11,7 +11,10 @@ from services.product_operations import (
 from services.purchase import purchase_creation
 
 
-def show_menu():
+def show_menu() -> None:
+    """
+    Displays the interactive command-line menu options.
+    """
     print("\nПродуктовий магазин\n")
     print("1. Додати новий товар на склад")
     print("2. Переглянути товари за категорією")
@@ -23,8 +26,12 @@ def show_menu():
     print("=" * 30)
 
 
-def interactive_purchase():
-    """Helper function for interactive purchase"""
+def interactive_purchase() -> None:
+    """
+    Handles the interactive workflow for gathering user input to create an order.
+    Prompts for the buyer's name and a list of products with quantities,
+    then triggers the purchase creation service.
+    """
     user = input("Введіть ім'я покупця: ")
     basket = {}
 
@@ -53,7 +60,12 @@ def interactive_purchase():
         print("Кошик порожній")
 
 
-def main():
+def main() -> None:
+    """
+    The main entry point for the CLI application.
+    Orchestrates the program flow, routing user choices to specific
+    service operations and handling global exceptions.
+    """
     while True:
         show_menu()
         choice = input("Оберіть пункт меню: ")
